@@ -1,0 +1,54 @@
+.RG_NEW_ENTITY_WINDOW {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+
+    z-index: 20;
+
+    /* min-height: 545px; */
+    max-width: fit-content;
+
+    background-color: var(--RG_ITEM_GREY);
+    box-shadow: 0px 0px 25px 0px black;
+    border-radius: 5px;
+    
+    font-size: larger;
+    color: var(--RG_TEXT_GREY);
+}
+
+.RG_NEWENTITY_FORMCHUNK {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: 10px;
+}
+
+.RG_NEWENTITY_CHUNK {
+    padding: 15px;
+}
+
+.RG_NEWENTITY_IDENTIFY_CHUNK {
+    display: flex;
+    gap: 10px;
+}
+
+.RG_NEWENTITY_APPLY_CHUNK {
+    display:flex;
+    justify-content: space-between;
+}
+
+.RG_NEWENTITY_WARNING {
+    color: lightsalmon;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    word-wrap:break-word;
+    font-size: small;
+    /* Yikes */
+    max-width: 200px;
+}

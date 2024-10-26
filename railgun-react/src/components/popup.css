@@ -1,0 +1,37 @@
+.RG_POPUP_WINDOW {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+
+    z-index: 20;
+
+    /* min-height: 545px; */
+    max-width: 400px;
+
+    background-color: var(--RG_ITEM_GREY);
+    box-shadow: 0px 0px 25px 0px black;
+    border-radius: 5px;
+
+    font-size: larger;
+    color: var(--RG_TEXT_GREY);
+}
+
+.RG_POPUP_CHUNK {
+    padding: 15px;
+}
+
+.RG_POPUP_APPLY_CHUNK {
+    display:flex;
+    justify-content: space-between;
+}
+
+.RG_POPUP_TEXT {
+    font-size: x-large;
+    color: goldenrod;
+    text-wrap: wrap;
+    text-align: center;
+}

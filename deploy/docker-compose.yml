@@ -1,0 +1,14 @@
+services:
+  # Railgun React
+  railgun_react:
+    image: railgun-react:0.0.1
+    ports:
+      - "5151:80"
+    restart: always
+    networks:
+      - railgun_network
+
+
+networks:
+  railgun_network:
+    external: true
