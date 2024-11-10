@@ -1,4 +1,3 @@
-
 import AsyncSelect from 'react-select/async'
 import { STELLAR, fetchRGData } from '/src/STELLAR.jsx';
 import './rgheader.css'
@@ -48,8 +47,8 @@ async function getSchemaOptions(setcontext){
             value: schema.code,
             label: schema.name,
             callback: () => {
-                if (setcontext && schema.entities) {
-                    history.pushState({}, "rAIlgun", `/${schema.code}/${schema.entities[0].soloname}`)
+                if (setcontext) {
+                    history.pushState({}, "rAIlgun", `/${schema.code}/${schema.entities ? schema.entities[0].soloname: ""}`)
                     setcontext({
                         schema:schema.code,
                         entity_type:schema.entities ? schema.entities[0].soloname : null
@@ -72,12 +71,10 @@ function OverviewELOption(props){
                     if (props.setcontext){
                         // Future-proofing
                         // We're in a Set Context environment, just swap contexts to swap data
-                        // history.pushState({}, "rAIlgun", `/${context.schema}/${entname}`)
-                        // setcontext({
-                        //     schema:context.schema,
-                        //     entity_type:entname
-                        // })
-                        location.href = `/${props.context.schema}`
+                        history.pushState({}, "rAIlgun", `/${props.context.schema}`)
+                        props.setcontext({
+                            schema:props.context.schema
+                        })
                     } else {
                         // We're outside of a Set Context environment. Redirect to new page and force reload.
                         location.href = `/${props.context.schema}`
@@ -129,9 +126,9 @@ function RGHeader(props) {
                     {/* TODO INSERT USER ICON HERE */}
                 </div>
             </div>
-            {props.context ? 
+            {props.context ?
             <div className="RG_HEADER_BOTTOM">
-                <div className='RG_PAGENAME'>{STELLAR.name}</div>
+                <div className='RG_PAGENAME'>{props.context.entity_type || STELLAR.name}</div>
             
                 <div className='RG_HEADER_BOTTOM_ENTLIST'>
                     <OverviewELOption  context={props.context} setcontext={props.setcontext}/>

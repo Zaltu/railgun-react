@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import { STELLAR, telescope } from '../STELLAR'
+import { createRGField } from '../STELLAR'
 import './createFieldBox.css'
 
 
@@ -10,6 +10,8 @@ const VALID_FIELD_TYPES = [  // TODO setup param edit boxes
     {label: "Date", type: "DATE"},
     {label: "JSON String", type: "JSON"},
     {label: "Checkbox", type: "BOOL"},
+    {label: "Password", type: "PASSWORD"},
+    {label: "Media", type: "MEDIA"},
     {label: "List", type: "LIST"},
     {label: "Entity", type: "ENTITY"},
     {label: "Multi-Entity", type: "MULTIENTITY"}
@@ -53,21 +55,15 @@ async function createField(e, fieldtype, context, setFieldCode, displayState, ad
     }
     console.log(CREATE_REQUEST)
 
-    fetch("http://127.0.0.1:8888/stellar", {
-        mode:"cors",
-        method: "POST",
-        body: JSON.stringify(CREATE_REQUEST)
-    })
-        .then((response) => {
-            if (response.ok) {
-                console.log("CREATED!!!!")
-                // TODO Stellar can be too slow here...
-                //addDisplayField(formData.fieldcode.value)
-                hideSelf(formData, setFieldCode, displayState)
-            } else {
-                console.log(response)
-            }
-        })
+    let response = await createRGField(CREATE_REQUEST)
+    if (response) {
+        console.log("CREATED!!!!")
+        // TODO Stellar can be too slow here...
+        //addDisplayField(formData.fieldcode.value)
+        hideSelf(formData, setFieldCode, displayState)
+    } else {
+        console.log(response)
+    }
 }
 
 

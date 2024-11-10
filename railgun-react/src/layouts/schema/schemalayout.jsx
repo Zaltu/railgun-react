@@ -1,9 +1,7 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState } from 'react'
 
-import { STELLAR, telescope, deleteRGEntity } from '/src/STELLAR'
+import { STELLAR, deleteRGEntity } from '/src/STELLAR'
 
-import {RGHeader} from '/src/components/rgheader.jsx'
 import {NewEntityWindow} from '/src/components/createEntityBox.jsx'
 import { Popup } from '/src/components/popup'
 
@@ -20,14 +18,8 @@ function EntityCard(props) {
             className='RG_ENTITY_CARD'
             onContextMenu={props.onContextMenu}
             onClick={(event) => {
-                if (props.setcontext) {
-                    // Future-proofing, if we're in a Set Context environment
-                    history.pushState({}, "rAIlgun", `/${props.schema}/${props.entity_name}`)
-                    props.setcontext({schema: props.schema, entity_type: props.entity_name})
-                } else {
-                    // We're not in a Set Context environment
-                    location.href = `/${props.schema}/${props.entity_name}`
-                }
+                history.pushState({}, "rAIlgun", `/${props.schema}/${props.entity_name}`)
+                props.setcontext({schema: props.schema, entity_type: props.entity_name})
             }}
         >
             {props.entity_name}
@@ -120,45 +112,31 @@ function setEntityCardContextMenuOpenPosition(event, setEntityCardContextMenu, s
 
 
 function SchemaBase(props) {
-    const [schema, setSchema] = useState(useParams().schema)
-    const [entities, setEntities] = useState()
+    const [entities, setEntities] = useState(Object.values(STELLAR.entities).filter((entity) => {return !entity.archived}))
     const [entityCreateVisible, showEntityCreate] = useState(false)
 
     const [showPopup, setShowPopup] = useState(null)
     const [cardContextMenu, setCardContextMenu] = useState(null)
 
-    // Set STELLAR... Not great timing but hey.
-    useEffect(() => {
-        // This forces a re-render which allows RGHeader to show the correct info.
-        // RGHeader is probably the one that should be fixed though... TODO
-        let binos = async () => {
-            await telescope(schema, null, true)
-            setEntities(Object.values(STELLAR.entities).filter((entity) => {return !entity.archived}))
-        }
-        binos()
-    }, [schema])
-
     return (
-        (STELLAR && STELLAR.code == schema && entities) ?
         <div>
-            <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={{schema:schema}} setcontext={null} />
-            <div style={{minHeight: "92vh", height: "92vh"}} className="RG_ENTITYCARD_BG">
+            <div style={{...props.style}} className="RG_ENTITYCARD_BG">
                 <CreateEntityCard showEntityCreate={showEntityCreate} />
                 {entities.map(entity => {
                     return (
                     <EntityCard
                         key={entity.code}
-                        schema={schema}
+                        schema={props.context.schema}
                         entity_name={entity.soloname}
+                        setcontext={props.setcontext}
                         onContextMenu={(event) => setEntityCardContextMenuOpenPosition(event, setCardContextMenu, schema, entity.soloname)}
                     />
                 )})}
             </div>
             {cardContextMenu ? <EntityCardContextMenu displayCardContextMenu={setCardContextMenu} contextMenu={cardContextMenu} setShowPopup={setShowPopup}/> : null}
-            {entityCreateVisible ? <NewEntityWindow schema={schema} displaySelf={showEntityCreate}/> : null}
+            {entityCreateVisible ? <NewEntityWindow schema={props.context.schema} displaySelf={showEntityCreate}/> : null}
             {showPopup ? <Popup {...showPopup} /> : null}
         </div>
-        : null
     )
 }
 

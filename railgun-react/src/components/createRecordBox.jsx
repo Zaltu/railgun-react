@@ -11,6 +11,7 @@ import { useRef } from 'react'
 const TYPE_DISPLAY_ELEMENTS = {
     "BOOL": RG_CHECKBOX,
     "TEXT": RG_DEFAULTCELL,
+    "PASSWORD": RG_PASSWORDCELL,
     "INT": RG_DEFAULTCELL,
     "FLOAT": RG_DEFAULTCELL,
     "JSON": RG_DEFAULTCELL,  // TODO needs to be formatted textarea...
@@ -40,6 +41,19 @@ function RG_DEFAULTCELL (required, code, options=null) {
         <input
             className="RG_NEWRECORD_EDITCELL"
             type='text'
+            required={required}
+            name={code}
+            id={code}
+        />
+    )
+}
+
+
+function RG_PASSWORDCELL (required, code, options=null) {
+    return (
+        <input
+            className="RG_NEWRECORD_EDITCELL"
+            type='password'
             required={required}
             name={code}
             id={code}

@@ -1,15 +1,15 @@
 var STELLAR = null
-var AUTH_HEADER = {"Authorization": `Bearer ${localStorage.AUTH_TOKEN}`}
 
 const RG_URL = import.meta.env.RG_BACKEND_URL
+const RG_DISCHARGE = RG_URL+"/discharge/"
 
 
 async function _makeRGCall(endpoint, body, method){
     let response = await fetch(`${RG_URL}/${endpoint}`, {
         mode:"cors",
         method: method || "POST",
-        headers: AUTH_HEADER,
-        body: body
+        body: body,
+        credentials: "include"
     })
     if ([401, 405].includes(response.status)){
         // Auth failure, redirect to login
@@ -27,18 +27,14 @@ async function login(creds) {
         mode:"cors",
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         method: "POST",
-        body: `grant_type=password&username=${creds.get("username")}&password=${creds.get("password")}`
+        body: `grant_type=password&username=${creds.get("username")}&password=${creds.get("password")}`,
+        credentials: "include"
     })
     if (!login_response.ok){
         console.log("returning false")
         return false
     }
-    localStorage.AUTH_TOKEN = (await login_response.json())["access_token"]
-    // Refresh auth token since it's stateless
-    AUTH_HEADER = {"Authorization": `Bearer ${localStorage.AUTH_TOKEN}`}
 
-    console.log(localStorage.AUTH_TOKEN)
-    console.log(AUTH_HEADER)
     return true
 }
 
@@ -124,6 +120,38 @@ async function batchRGData(batchData){
     }
 }
 
+////////////////////////////////////////////////////////////
+// STELLAR functions are a bunch of dupes, for clarity... //
+////////////////////////////////////////////////////////////
+async function createRGField(CREATE_REQUEST) {
+    let response = await _makeRGCall(
+        "stellar",
+        JSON.stringify(CREATE_REQUEST),
+    )
+    if (response.ok) {
+        console.log("CREATED!!!!")
+        return true
+    } else {
+        console.error(response)
+        return false
+    }
+}
+
+async function deleteRGField(DELETE_REQUEST) {
+    let response = await _makeRGCall(
+        "stellar",
+        JSON.stringify(DELETE_REQUEST),
+    )
+    if (response.ok) {
+        console.log("CREATED!!!!")
+        return true
+    } else {
+        console.error(response)
+        return false
+    }
+}
+
+
 
 async function createRGEntity(CREATE_REQUEST) {
     let response = await _makeRGCall(
@@ -140,7 +168,6 @@ async function createRGEntity(CREATE_REQUEST) {
 }
 
 async function deleteRGEntity(DELETE_REQUEST) {
-    // This is totally a duplicate...
     let response = await _makeRGCall(
         "stellar",
         JSON.stringify(DELETE_REQUEST),
@@ -153,6 +180,45 @@ async function deleteRGEntity(DELETE_REQUEST) {
         return false
     }
 }
+
+
+async function uploadRGData(file, metadata) {
+    let form = new FormData()
+    form.set("metadata", metadata)
+    form.set("file", file)
+    console.log(form)
+    let response = await _makeRGCall(
+        "upload",
+        form
+    )
+    if (response.ok) {
+        console.log("UPLOADED!!!!!!")
+        return await response.json()
+    } else {
+        console.err(response)
+    }
+}
+
+
+async function downloadRGData(path, src=null) {
+    let response = await _makeRGCall(
+        "download",
+        JSON.stringify({"path": path})
+    )
+    if (response.ok){
+        // We may pass a state setter... HACK
+        if (src) {
+            src(await response.blob())
+            return
+        } else {
+            return await response.blob()
+        }
+    } else {
+        console.error(response)
+        return ""
+    }
+}
+
 
 
 async function fetchAutocompleteOptions(fieldConstraints, input) {
@@ -190,9 +256,12 @@ async function fetchAutocompleteOptions(fieldConstraints, input) {
 
 
 export {
-    STELLAR, AUTH_HEADER,
+    STELLAR,
+    RG_URL, RG_DISCHARGE,
     telescope, fetchRGData,
     createRGData, updateRGData, batchRGData,
+    createRGField, deleteRGField,
     createRGEntity, deleteRGEntity,
+    uploadRGData, downloadRGData,
     fetchAutocompleteOptions, login
 };

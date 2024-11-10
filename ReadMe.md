@@ -15,7 +15,6 @@ From the root directory of the project:
 ```bash
 docker build --no-cache -t railgun-react:0.0.1 -f deploy/Dockerfile .
 ```
-To note, the only reason the StellarDB image deviates from the default `postgres` image is to create the initial user account...
 
 #### Running
 ```bash

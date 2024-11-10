@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState } from "react"
+import {useEffect, useMemo, useRef, useState } from "react"
 
 import Select from 'react-select'
 import AsyncSelect from 'react-select/async'
@@ -12,19 +12,28 @@ import { NewFieldWindow } from "/src/components/createFieldBox.jsx"
 import { EditFieldWindow } from "/src/components/editFieldBox.jsx"
 import { NewRecordWindow } from "/src/components/createRecordBox.jsx"
 
-import {STELLAR, telescope, fetchRGData, updateRGData, fetchAutocompleteOptions} from '/src/STELLAR.jsx';
+import {STELLAR, RG_DISCHARGE, telescope, fetchRGData, updateRGData, downloadRGData, uploadRGData, fetchAutocompleteOptions} from '/src/STELLAR.jsx';
+import { SchemaBase } from "../schema/schemalayout"
 
 
 const TYPE_DISPLAY_ELEMENTS = {
     "BOOL": RG_CHECKBOX,
     "TEXT": RG_DEFAULTCELL,
+    "PASSWORD": RG_PASSWORDCELL,
     "INT": RG_DEFAULTCELL,
     "FLOAT": RG_DEFAULTCELL,
     "JSON": RG_JSON_DISPLAY,
     "DATE": RG_DEFAULTCELL,  // TODO datepicker
+    "MEDIA": RG_MEDIACELL,
     "LIST": RG_GRID_LIST,
     "MULTIENTITY": RG_MULTIENTITY,  // TODO
     "ENTITY": RG_ENTITY  // TODO
+}
+
+
+// Not Railgun-enforced
+const MEDIA_TYPE_DISPLAY_ELEMENTS = {
+    "IMAGE": RG_MEDIACELL_IMAGE
 }
 
 
@@ -71,6 +80,39 @@ function RG_DEFAULTCELL (cell, context) {
             onDoubleClick={() => setEditable(true)}
         >
             {cell.getValue()}
+        </div>
+}
+
+function RG_PASSWORDCELL (cell, context) {
+    const [editable, setEditable] = useState(false)
+
+    return editable ?
+        <input
+            className="RG_GRID_EDITCELL"
+            onFocus={(event) => event.target.select()}
+            onBlur={() => setEditable(false)}
+            style={{width: "100%", outline: "none"}}
+            type='text'
+            defaultValue={cell.getValue()}
+            autoFocus
+            onKeyDown={(event) => {
+                if (event.key == "Escape"){
+                    setEditable(false)
+                } else if (event.key == "Enter") {
+                    // Submit data update request
+                    updateRG(event, cell, event.target.value, context)
+                    setEditable(false)
+                }
+            }}
+        />
+
+        :
+        //<div> TODO Set edit icon</div>
+        <div
+            className="RG_GRID_DISPLAYCELL"
+            onDoubleClick={() => setEditable(true)}
+        >
+            ********
         </div>
 }
 
@@ -327,6 +369,72 @@ function RG_GRID_CELL_HIDDEN ({...rest}) {
     )
 }
 
+
+function RG_MEDIACELL (cell, context) {
+    // There are a bunch of possible types of media cells in theory.
+    // Implement a few here, but fallback on text, which will a str display of the path.
+    return cell.getValue() ?
+        STELLAR && context.entity_type && STELLAR.entities[context.entity_type] ? 
+            MEDIA_TYPE_DISPLAY_ELEMENTS[STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type] ?
+                MEDIA_TYPE_DISPLAY_ELEMENTS[STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type](cell, cell.getValue())
+                :
+                _RG_MEDIA_FALLBACK(cell, context)  // No display for this existing media
+        :
+        _RG_MEDIA_FALLBACK(cell, context)  // STELLAR not yet loaded
+    :
+    RG_MEDIA_EMPTY(cell, context)  // No Cell value (no media uploaded)
+}
+
+
+function RG_MEDIACELL_IMAGE(cell, remotePathToMed) {
+    return (
+        <div style={{height: "100%", width: cell.column.columnDef.enableResizing ? "100%": "150px", maxWidth: "400px"}}>
+            <img style={{height: "100%", width: "100%"}} src={RG_DISCHARGE+remotePathToMed} />
+        </div>
+    )
+}
+
+function RG_MEDIA_EMPTY (cell, context) {
+    return (
+        <div
+            className="RG_GRID_DISPLAYCELL"
+            style={{textAlign: "center"}}
+        >
+            <label
+                style={{textDecoration: "underline", fontStyle: "italic", cursor: "pointer"}}
+                htmlFor={"up_"+cell.id}
+            >
+                Upload File
+            </label>
+            <input
+                className="RG_FILE_HIDE"
+                id={"up_"+cell.id}
+                type="file"
+                onChange={(event) => uploadRG(event, cell, context.schema, cell.getContext().table.options.meta.updateData)}
+            />
+        </div>
+    )
+}
+
+function _RG_MEDIA_FALLBACK (cell, context) {
+    return RG_DEFAULTCELL(cell, context)
+}
+
+
+async function uploadRG(event, cell, schema, updateCellData) {
+    let entity = cell.row.original
+    entity["schema"] = schema
+    entity["field"] = cell.column.id
+    let newimg = await uploadRGData(event.target.files[0], JSON.stringify(entity))
+    // Triggers re-render, assigning the correct Media type display as necessary
+    updateCellData(
+        cell.row.index,
+        cell.column.id,
+        newimg.path
+    )
+}
+
+
 async function updateRG(event, cell, newvalue, context){
     if ((cell.getValue() === newvalue)||(cell.getValue() != 0 && !cell.getValue() && !newvalue)) {
         // No actual data changed
@@ -404,7 +512,6 @@ function formatHeaders(stellar_fields, context) {
             return TYPE_DISPLAY_ELEMENTS[stellar_field.type] ? TYPE_DISPLAY_ELEMENTS[stellar_field.type](cell, context) : 'MISING DISPLAY ELEMENT'
         },
         enableResizing: false,
-        // size: 0//'fit-content'//'fit-content'//150  // TODO fit-content somehow or page layout save
     })))
     headers.push(ADD_HEADER)
     return headers
@@ -433,13 +540,13 @@ async function updateGridData(context, fields, filters, page, setData, setCount)
 }
 
 
-function attemptGridLayout() {
+async function attemptGridLayout(setcontext) {
     let pathchunks = new URL(window.location).pathname.split("/").filter(e => e)
-    const context = {
+    await telescope(pathchunks[0])
+    setcontext({
         schema: pathchunks[0],
         entity_type: pathchunks[1]
-    }
-    return context
+    })
 }
 
 
@@ -449,7 +556,7 @@ function GridLayout(props) {
     const [selectedFieldData, setSelectedField] = useState({})
     const [recordCreateVisible, showRecordCreation] = useState(false)
 
-    const [context, setContext] = useState(attemptGridLayout())
+    const [context, setContext] = useState({})
     const [fields, setFields] = useState({})
     const [data, setData] = useState({})
     const [filters, setFilters] = useState(null)
@@ -462,7 +569,11 @@ function GridLayout(props) {
 
     // When context changes, update fields
     useEffect(()=>{
-        setFieldsOnContextChange(context, setFields)
+        if (context.entity_type){
+            // We're going to another grid view
+            setFieldsOnContextChange(context, setFields)
+        }
+        // Else we're going to the overview view
         tableref.current ? tableref.current.resetRowSelection() : null
     }, [context])
 
@@ -504,17 +615,29 @@ function GridLayout(props) {
         })
     }, [searchValue])
 
-    return STELLAR!=null ? (
+
+    useEffect(() => {
+        attemptGridLayout(setContext)
+    }, [])
+
+    return (STELLAR ?
         <div>
             <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={context} setcontext={setContext} />
-            <Gridtop style={{minHeight: "4.5vh", height: "4.5vh"}} context={context} fields={fields} setSearchValue={setSearchValue} showFieldCreationWindow={showFieldCreation} showRecordCreationWindow={showRecordCreation} />
-            <Grid style={{minHeight: "85vh", height: "85vh"}} context={context} data={data} setData={setData} headers={headers} showFieldEditWindow={showFieldEdit} setSelectedField={setSelectedField} tableref={tableref} updateData={() => {updateGridData(context, fields, filters, page, setData, setCount);tableref.current.resetRowSelection()}} />
-            <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={page} setPage={setPage} />
+            { context.entity_type ?
+            <div>
+                <Gridtop style={{minHeight: "4.5vh", height: "4.5vh"}} context={context} fields={fields} setSearchValue={setSearchValue} showFieldCreationWindow={showFieldCreation} showRecordCreationWindow={showRecordCreation} />
+                <Grid style={{minHeight: "85vh", height: "85vh"}} context={context} data={data} setData={setData} headers={headers} showFieldEditWindow={showFieldEdit} setSelectedField={setSelectedField} tableref={tableref} updateData={() => {updateGridData(context, fields, filters, page, setData, setCount);tableref.current.resetRowSelection()}} />
+                <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={page} setPage={setPage} />
+            </div>
+            :
+            <SchemaBase style={{minHeight: "92vh", height: "92vh"}} context={context} setcontext={setContext} />
+            }
             {fieldCreateVisible ? <NewFieldWindow context={context} addDisplayField={(newfield)=> updateFieldsOnCreate(context, fields, setFields, newfield)} displaySelf={showFieldCreation} /> : null }
             {fieldEditVisible ? <EditFieldWindow context={context} displaySelf={showFieldEdit} field={selectedFieldData} /> : null }
             {recordCreateVisible ? <NewRecordWindow context={context} updateData={() => {updateGridData(context, fields, filters, page, setData, setCount);tableref.current.resetRowSelection()}} displaySelf={showRecordCreation} /> : null }
         </div>
-    ) : ""
+        : null
+    )
 }
 
 export {GridLayout}
