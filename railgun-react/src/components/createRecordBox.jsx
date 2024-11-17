@@ -1,7 +1,7 @@
 import Select from 'react-select'
 import AsyncSelect from 'react-select/async'
 
-import { STELLAR, createRGData, fetchAutocompleteOptions } from '../STELLAR'
+import { createRGData, fetchAutocompleteOptions } from '../STELLAR'
 
 import './createRecordBox.css'
 import { useRef } from 'react'
@@ -108,7 +108,7 @@ function RG_MULTIENTITY (required, code, options, refs, extras) {
             id={code}
             cacheOptions
             loadOptions={(inputValue) => {
-                return fetchAutocompleteOptions(options, inputValue)
+                return fetchAutocompleteOptions(options, inputValue, extras.context.STELLAR)
             }}
             noOptionsMessage={() => `Find a ${Object.keys(options).join(". ")} by typing its name.`}
             placeholder={null}
@@ -150,7 +150,7 @@ function RG_ENTITY (required, code, options, refs, extras) {
             id={code}
             cacheOptions
             loadOptions={(inputValue) => {
-                return fetchAutocompleteOptions(options, inputValue)
+                return fetchAutocompleteOptions(options, inputValue, extras.context.STELLAR)
             }}
             noOptionsMessage={() => `Find a ${Object.keys(options).join(". ")} by typing its name.`}
             placeholder={null}
@@ -194,18 +194,19 @@ async function createEntity(e, context, displaySelf, resetables, updateData) {
     }
     // Manage all the resetables separately because of react-select's value management
     resetables.current.forEach((resetable) => {
-        if (STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="MULTIENTITY") {
-            let multillist = resetable.getValue().map(ent => multillist.push(JSON.parse(ent.value)))
+        if (context.STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="MULTIENTITY") {
+            let multillist = []
+            resetable.getValue().map(ent => multillist.push(JSON.parse(ent.value)))
             if (multillist.length){
                 data[resetable.props.id] = multillist
             }
         }
-        else if (STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="ENTITY") {
+        else if (context.STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="ENTITY") {
             if (resetable.getValue()[0]) {
                 data[resetable.props.id] = JSON.parse(resetable.getValue()[0].value)
             }
         }
-        else if (STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="LIST") {
+        else if (context.STELLAR.entities[context.entity_type].fields[resetable.props.id].type=="LIST") {
             if (resetable.getValue()[0]) {
                 data[resetable.props.id] = resetable.getValue()[0].value
             }
@@ -244,10 +245,10 @@ function hideSelf(form, displayState, refs) {
 }
 
 
-function prepFieldElements(entity_type, refs) {
+function prepFieldElements(context, refs) {
     let labinputs = []
     let i = 0
-    Object.values(STELLAR.entities[entity_type].fields).forEach(field => {
+    Object.values(context.STELLAR.entities[context.entity_type].fields).forEach(field => {
         // TODO non/editable fields
         if (field.code=="uid"){return}
         // TODO required fields
@@ -259,7 +260,7 @@ function prepFieldElements(entity_type, refs) {
                     <label name={field.code} htmlFor={field.code}>{field.name}</label>
                 </div>
                 <div className='RG_NEWRECORD_INPUTSIDE'>
-                    {TYPE_DISPLAY_ELEMENTS[field.type] ? TYPE_DISPLAY_ELEMENTS[field.type](field.code=='code', field.code, field.params.constraints, refs, {entity_type: entity_type, refi: i}) : 'MISSING EDIT CELL'}
+                    {TYPE_DISPLAY_ELEMENTS[field.type] ? TYPE_DISPLAY_ELEMENTS[field.type](field.code=='code', field.code, field.params.constraints, refs, {context: context, refi: i}) : 'MISSING EDIT CELL'}
                 </div>
             </div>
         ))
@@ -275,7 +276,7 @@ function NewRecordWindow(props) {
         <div className='RG_NEWRECORD_WINDOW'>
             <form autoComplete='off' onSubmit={(event) => createEntity(event, props.context, props.displaySelf, refs, props.updateData)}>
                 <div name="formChunk" className='RG_NEWRECORD_CHUNK RG_NEWRECORD_FORMCHUNK'>
-                    {...prepFieldElements(props.context.entity_type, refs, props.setData)}
+                    {...prepFieldElements(props.context, refs, props.setData)}
                 </div>
                 <div name="applyChunk" className='RG_NEWRECORD_APPLY_CHUNK RG_NEWRECORD_CHUNK'>
                     <button 

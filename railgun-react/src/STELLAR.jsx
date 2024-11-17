@@ -1,5 +1,3 @@
-var STELLAR = null
-
 const RG_URL = import.meta.env.RG_BACKEND_URL
 const RG_DISCHARGE = RG_URL+"/discharge/"
 
@@ -39,26 +37,18 @@ async function login(creds) {
 }
 
 
-async function telescope(schema, entity, setGlobal=true) {
+async function telescope(schema, entity) {
     let response = await _makeRGCall(
         "telescope",
         JSON.stringify(entity ? {schema: schema, entity:entity} : {schema: schema})
     )
-    let LOCAL_STELLAR = await response.json()
-    if (setGlobal) {
-        STELLAR = LOCAL_STELLAR
-    }
-    return LOCAL_STELLAR
+    return await response.json()
 }
 
 
-async function fetchRGData(entity_type, fields, filters=null, page=1, schema=null, include_count=true) {
-    if (!STELLAR && !schema) {
-        return null
-    }
-
+async function fetchRGData(schema, entity_type, fields, filters=null, page=1, include_count=true) {
     let fetch_data = {
-        "schema": schema||STELLAR.code,
+        "schema": schema,
         "entity": entity_type,
         "read": {
                 "filters": filters ? filters : null,
@@ -221,7 +211,7 @@ async function downloadRGData(path, src=null) {
 
 
 
-async function fetchAutocompleteOptions(fieldConstraints, input) {
+async function fetchAutocompleteOptions(fieldConstraints, input, STELLAR) {
     let allOptions = []
     await Promise.all(Object.keys(fieldConstraints).map(async (possibleType) => {
         let fetchData = {
@@ -256,7 +246,6 @@ async function fetchAutocompleteOptions(fieldConstraints, input) {
 
 
 export {
-    STELLAR,
     RG_URL, RG_DISCHARGE,
     telescope, fetchRGData,
     createRGData, updateRGData, batchRGData,

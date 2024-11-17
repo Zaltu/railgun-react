@@ -2,9 +2,7 @@ import React, { useState } from 'react'
 
 import { login } from '/src/STELLAR.jsx'
 
-import '/src/styles/CONSTANTS.css'
-import '/src/styles/component_styles.css'
-import './login.css'
+import './styles/login.css'
 
 
 async function attemptLogin(event, setDisplayFailed) {

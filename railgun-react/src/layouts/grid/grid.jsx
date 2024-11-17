@@ -3,9 +3,9 @@ import {useReactTable, getCoreRowModel, flexRender} from '@tanstack/react-table'
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import { ClickAwayListener } from "@mui/base/ClickAwayListener";
-import {STELLAR, batchRGData} from '/src/STELLAR.jsx';
+import { batchRGData } from '/src/STELLAR.jsx';
 
-import '/src/styles/grid.css'
+import './styles/grid.css'
 
 
 
@@ -128,12 +128,17 @@ function HeaderContextMenu(props) {
                     }
                 }}
             >
-                <MenuItem onClick={() => {props.showFieldEditWindow(true);props.setContextMenu(null)}}>Edit Field</MenuItem>
-                <MenuItem onClick={() => console.log("Hide Field")}>Hide Field</MenuItem>
+                <MenuItem onClick={() => {props.showFieldEditWindow(true);props.setContextMenu(null)}}>
+                    Edit Field
+                </MenuItem>
+                <MenuItem onClick={() => {props.toggleFieldDisplay();props.setContextMenu(null)}}>
+                    Hide Field
+                </MenuItem>
             </MenuList>
         </ClickAwayListener>
     )
 }
+
 
 function EntityContextMenu(props) {
     return (
@@ -157,7 +162,11 @@ function EntityContextMenu(props) {
                     }
                 }}
             >
-                <MenuItem sx={{color:"#ec4a41"}} onClick={() => {console.log("DELETING LMAO");props.batchDeleteRG();props.setContextMenu(null)}}>DELETE THIS</MenuItem>
+                <MenuItem
+                    sx={{color:"#ec4a41"}}
+                    onClick={() => {console.log("DELETING LMAO");props.batchDeleteRG();props.setContextMenu(null)}}
+                >DELETE THIS
+                </MenuItem>
             </MenuList>
         </ClickAwayListener>
     )
@@ -166,7 +175,7 @@ function EntityContextMenu(props) {
 
 function setHeaderContextMenuOpenPosition(event, context, header, setHeaderContextMenu, setSelectedField) {
     event.preventDefault()
-    setSelectedField(STELLAR.entities[context.entity_type].fields[header.id])
+    setSelectedField(context.STELLAR.entities[context.entity_type].fields[header.id])
     setHeaderContextMenu({
             mouseX: event.clientX,
             mouseY: event.clientY
@@ -257,7 +266,7 @@ function Grid(props) {
                 </tbody>
             </table>
             {headerContextMenu ? 
-                <HeaderContextMenu contextMenu={headerContextMenu} setContextMenu={setHeaderContextMenu} showFieldEditWindow={props.showFieldEditWindow}/>
+                <HeaderContextMenu contextMenu={headerContextMenu} setContextMenu={setHeaderContextMenu} toggleFieldDisplay={props.toggleFieldDisplay} showFieldEditWindow={props.showFieldEditWindow}/>
             :null}
             {entityContextMenu ? 
                 <EntityContextMenu contextMenu={entityContextMenu} setContextMenu={setEntityContextMenu} batchDeleteRG={()=>batchDeleteRG(props.context, table.getSelectedRowModel, props.updateData)} />

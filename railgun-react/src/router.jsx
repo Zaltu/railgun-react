@@ -10,7 +10,6 @@ function RailgunWeb() {
             <Route path="/" >
                 {/* Home page here */}
                 <Route index element={<RailgunRoot />} />
-                {/* Base route for each active schema */}
                 {/* Assume the rest routes towards a grid page */}
                 <Route path="*" element={<GridLayout />}/>
             </Route>

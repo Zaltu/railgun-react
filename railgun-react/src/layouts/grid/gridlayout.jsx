@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState } from "react"
+import {useEffect, useRef, useState } from "react"
 
 import Select from 'react-select'
 import AsyncSelect from 'react-select/async'
@@ -12,8 +12,9 @@ import { NewFieldWindow } from "/src/components/createFieldBox.jsx"
 import { EditFieldWindow } from "/src/components/editFieldBox.jsx"
 import { NewRecordWindow } from "/src/components/createRecordBox.jsx"
 
-import {STELLAR, RG_DISCHARGE, telescope, fetchRGData, updateRGData, downloadRGData, uploadRGData, fetchAutocompleteOptions} from '/src/STELLAR.jsx';
+import { RG_DISCHARGE, telescope, fetchRGData, updateRGData, uploadRGData, fetchAutocompleteOptions } from '/src/STELLAR.jsx';
 import { SchemaBase } from "../schema/schemalayout"
+import { PageBase } from "../pages/pagebaselayout"
 
 
 const TYPE_DISPLAY_ELEMENTS = {
@@ -162,7 +163,7 @@ function RG_GRID_LIST (cell, context) {
             }}
             onMenuClose={() => setEditable(false)}
             unstyled
-            options={STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints.map(((option) => {
+            options={context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints.map(((option) => {
                 return {label: option, value: option}
             }))}
             className='RG_GRID_LISTFIELD'
@@ -227,12 +228,12 @@ function RG_MULTIENTITY (cell, context) {
             }}
             cacheOptions
             defaultValue={(cell.getValue()||[]).map(ent => {
-                return {label: ent[STELLAR.entities[ent["type"]].display_name_col], value: JSON.stringify(ent)}
+                return {label: ent[context.STELLAR.entities[ent["type"]].display_name_col], value: JSON.stringify(ent)}
             })}
             loadOptions={(inputValue) => {
-                return fetchAutocompleteOptions(STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints, inputValue)
+                return fetchAutocompleteOptions(context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints, inputValue, context.STELLAR)
             }}
-            noOptionsMessage={() => `Find a ${Object.keys(STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints).join(". ")} by typing its name.`}
+            noOptionsMessage={() => `Find a ${Object.keys(context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints).join(". ")} by typing its name.`}
             placeholder={null}
             className='RG_MULTIENTITY_LISTFIELD'
             classNames={{
@@ -282,10 +283,10 @@ function RG_MULTIENTITY (cell, context) {
             setEditable(true)
         }}
     >
-        {(cell.getValue() || []).map(entity => (
+        {( (Array.isArray(cell.getValue()) && cell.getValue()) || []).map(entity => {
             // Gets a little weird when changing headers & data during "potentially" different frames.
-            entity.type in STELLAR["entities"] ? entity[STELLAR["entities"][entity.type].display_name_col]: ""
-        )).join(', ')}
+            return entity.type in context.STELLAR["entities"] ? entity[context.STELLAR["entities"][entity.type].display_name_col]: ""
+        }).join(', ')}
     </div>)
 }
 
@@ -306,12 +307,12 @@ function RG_ENTITY (cell, context) {
             }}
             cacheOptions
             defaultValue={
-                {label: cell.getValue() ? cell.getValue()[STELLAR["entities"][cell.getValue().type].display_name_col]:"", value: JSON.stringify(cell.getValue()||"")}
+                {label: cell.getValue() ? cell.getValue()[context.STELLAR["entities"][cell.getValue().type].display_name_col]:"", value: JSON.stringify(cell.getValue()||"")}
             }
             loadOptions={(inputValue) => {
-                return fetchAutocompleteOptions(STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints, inputValue)
+                return fetchAutocompleteOptions(context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints, inputValue, context.STELLAR)
             }}
-            noOptionsMessage={() => `Find a ${Object.keys(STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints).join(". ")} by typing its name.`}
+            noOptionsMessage={() => `Find a ${Object.keys(context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.constraints).join(". ")} by typing its name.`}
             placeholder={null}
             className='RG_MULTIENTITY_LISTFIELD'
             classNames={{
@@ -359,7 +360,7 @@ function RG_ENTITY (cell, context) {
         }}
     >
         {/* Gets a little weird when changing headers & data during "potentially" different frames. */}
-        {cell.getValue()&&cell.getValue().type in STELLAR["entities"] ? cell.getValue()[STELLAR["entities"][cell.getValue().type].display_name_col]: ""}
+        {cell.getValue()&&cell.getValue().type in context.STELLAR["entities"] ? cell.getValue()[context.STELLAR["entities"][cell.getValue().type].display_name_col]: ""}
     </div>)
 }
 
@@ -374,17 +375,13 @@ function RG_MEDIACELL (cell, context) {
     // There are a bunch of possible types of media cells in theory.
     // Implement a few here, but fallback on text, which will a str display of the path.
     return cell.getValue() ?
-        STELLAR && context.entity_type && STELLAR.entities[context.entity_type] ? 
-            MEDIA_TYPE_DISPLAY_ELEMENTS[STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type] ?
-                MEDIA_TYPE_DISPLAY_ELEMENTS[STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type](cell, cell.getValue())
-                :
-                _RG_MEDIA_FALLBACK(cell, context)  // No display for this existing media
+        MEDIA_TYPE_DISPLAY_ELEMENTS[context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type] ?
+            MEDIA_TYPE_DISPLAY_ELEMENTS[context.STELLAR.entities[context.entity_type].fields[cell.column.id].params.media_type](cell, cell.getValue())
+            :
+            _RG_MEDIA_FALLBACK(cell, context)  // No display for this existing media
         :
-        _RG_MEDIA_FALLBACK(cell, context)  // STELLAR not yet loaded
-    :
-    RG_MEDIA_EMPTY(cell, context)  // No Cell value (no media uploaded)
+        RG_MEDIA_EMPTY(cell, context)  // No Cell value (no media uploaded)
 }
-
 
 function RG_MEDIACELL_IMAGE(cell, remotePathToMed) {
     return (
@@ -505,13 +502,14 @@ const ADD_HEADER = {
 function formatHeaders(stellar_fields, context) {
     const headers = []
     headers.push(SELECT_HEADER)
-    headers.push(...Object.values(stellar_fields).map(stellar_field => ({
+    headers.push(...Object.values(stellar_fields||{}).map(stellar_field => ({
         header: stellar_field.name,
         accessorKey: stellar_field.code,
         cell: ({cell}) => {
             return TYPE_DISPLAY_ELEMENTS[stellar_field.type] ? TYPE_DISPLAY_ELEMENTS[stellar_field.type](cell, context) : 'MISING DISPLAY ELEMENT'
         },
-        enableResizing: false,
+        enableResizing: stellar_field.width ? true: false,
+        size: stellar_field.width ?? null
     })))
     headers.push(ADD_HEADER)
     return headers
@@ -519,18 +517,27 @@ function formatHeaders(stellar_fields, context) {
 
 
 
-async function setFieldsOnContextChange(newcontext, setFields) {
-    await telescope(newcontext.schema)
-    setFields(STELLAR.entities[newcontext.entity_type].fields)
+function toggleFieldDisplay(field_to_toggle, fields, setFields){
+    if (!field_to_toggle){
+        // Someone's probably trying to hide the "default" fields (select/add)
+        // TODO Header Context Menu shouldn't event appear on these... No reason to.
+        return
+    }
+    let localFields = {}
+    Object.keys(fields).map((key)=>{
+        localFields[key] = fields[key]
+    })
+    if (fields[field_to_toggle.code]) {
+        delete localFields[field_to_toggle.code]
+    } else {
+        localFields[field_to_toggle.code] = field_to_toggle
+    }
+    setFields(localFields)
 }
 
-async function updateFieldsOnCreate(context, oldfields, setFields, newfield) {
-    await telescope(context.schema)
-    setFields(oldfields+[STELLAR.entities[context.entity_type].fields[newfield]])
-}
 
 async function updateGridData(context, fields, filters, page, setData, setCount) {
-    let rg_data = await fetchRGData(context.entity_type, Object.keys(fields), filters, page)
+    let rg_data = await fetchRGData(context.schema, context.entity_type, Object.keys(fields), filters, page)
     if (!rg_data){
         // STELLAR is probably not set up...
         return
@@ -540,13 +547,68 @@ async function updateGridData(context, fields, filters, page, setData, setCount)
 }
 
 
-async function attemptGridLayout(setcontext) {
-    let pathchunks = new URL(window.location).pathname.split("/").filter(e => e)
-    await telescope(pathchunks[0])
+async function attemptPageLayout(setcontext, pageid) {
+    let page = (await fetchRGData(
+        "railgun_internal",
+        "Page",
+        ["name", "page_settings"],
+        {
+            "filter_operator": "AND",
+            "filters": [["uid", "is", pageid]]
+        },
+        1, false))[0]
+    let pagesettings = []
+    await Promise.all(page.page_settings.map(async (pagesetting) => {
+        let fetchData = await fetchRGData(
+            "railgun_internal",
+            "Page Setting",
+            ["name", "entity", "sort", "filters", "fields", "entity.Entity.schema.Schema.code"],
+            {
+                "filter_operator": "AND",
+                "filters": [["uid", "is", pagesetting.uid]]
+            },
+            1, false)
+        pagesettings = pagesettings.concat(fetchData)
+    }))
     setcontext({
-        schema: pathchunks[0],
-        entity_type: pathchunks[1]
+        page: {
+            base: page,
+            page_settings: pagesettings,
+            active: null
+        }
     })
+}
+
+function attemptGridLayout(setcontext) {
+    let pathchunks = decodeURI(new URL(window.location).pathname).split("/").filter(e => e)
+    console.log(pathchunks)
+    if (pathchunks[0] == "pages"){
+        // Try to load a page context
+        if (!pathchunks[1]){
+            // No page given...
+            location.href = "/"  // Return to home, 404 TODO
+            return
+        } else {
+            attemptPageLayout(setcontext, pathchunks[1])
+        }
+    } else {
+        // Enter default context
+        // TODO default pages general system
+        setcontext({
+            schema: pathchunks[0],
+            entity_type: pathchunks[1]
+        })
+    }
+}
+
+
+async function setContext(real_setter, newcontext) {
+    // Wrapper function to ensure STELLAR is populated and is part of the
+    // context before triggering the endless waterfall of hook updates.
+    if (newcontext.schema) {
+        newcontext["STELLAR"] = await telescope(newcontext.schema)
+    }
+    real_setter(newcontext)
 }
 
 
@@ -556,22 +618,34 @@ function GridLayout(props) {
     const [selectedFieldData, setSelectedField] = useState({})
     const [recordCreateVisible, showRecordCreation] = useState(false)
 
-    const [context, setContext] = useState({})
-    const [fields, setFields] = useState({})
+    const [context, _setContext] = useState({})
+    const [fields, setFields] = useState()
     const [data, setData] = useState({})
     const [filters, setFilters] = useState(null)
     const [headers, setHeaders] = useState(formatHeaders(fields, context))  // TODO Show/Hide
     const [searchValue, setSearchValue] = useState(null)
-    const [count, setCount] = useState(71)
-    const [page, setPage] = useState(1)
+    const [count, setCount] = useState(71) // 71 ???
+    const [gridPage, setGridPage] = useState(1)
 
     const tableref = useRef()
 
     // When context changes, update fields
     useEffect(()=>{
+        // TODO this entire effect can be trashed since we have a higher-level setcontext wrapper poggers
         if (context.entity_type){
             // We're going to another grid view
-            setFieldsOnContextChange(context, setFields)
+            // If we have an active page, that has actual fields defined, display those fields.
+            // If we have an active page defined with no fields, display all fields like on a default page.
+            if (context.page && context.page.active && context.page.active.fields) {
+                let pagefields = {}
+                context.page.active.fields.forEach((pagefield) => {
+                    pagefields[pagefield.field] = context.STELLAR.entities[context.entity_type].fields[pagefield.field]
+                    pagefields[pagefield.field].width = pagefield.width
+                })
+                setFields(pagefields)
+            } else {
+                setFields(context.STELLAR.entities[context.entity_type].fields)
+            }
         }
         // Else we're going to the overview view
         tableref.current ? tableref.current.resetRowSelection() : null
@@ -581,7 +655,8 @@ function GridLayout(props) {
     // TODO is data needed?
     useEffect(()=>{
         setHeaders(formatHeaders(fields, context))
-        updateGridData(context, fields, filters, page, setData, setCount)
+        if (!context.STELLAR){return}
+        updateGridData(context, fields, filters, gridPage, setData, setCount)
         // We update the data in case there's a default field value or something,
         // but the selection doesn't need to be changed purely because a field was added.
         // tableref.current.resetRowSelection()
@@ -589,17 +664,19 @@ function GridLayout(props) {
 
     // When filters change, update data
     useEffect(() => {
-        updateGridData(context, fields, filters, page, setData, setCount)
+        if (!context.STELLAR){return}
+        updateGridData(context, fields, filters, gridPage, setData, setCount)
         tableref.current ? tableref.current.resetRowSelection() : null  // Clear selection as it's independent of table indexing
     }, [filters])
 
     // When page changes, update data
     useEffect(() => {
+        if (!context.STELLAR){return}
         // HACK doing like this means that the count gets updated even if all that changes is the page
         // ...but it's convenient
-        updateGridData(context, fields, filters, page, setData, setCount)
+        updateGridData(context, fields, filters, gridPage, setData, setCount)
         tableref.current ? tableref.current.resetRowSelection() : null  // Clear selection as it's independent of table indexing
-    }, [page])
+    }, [gridPage])
 
     // When defaultSearch changes, change filters
     useEffect(() =>  {
@@ -610,33 +687,57 @@ function GridLayout(props) {
         setFilters({
             filter_operator: "AND",
             filters: [
-                [STELLAR.entities[context.entity_type].display_name_col, "contains", searchValue]
+                [context.STELLAR.entities[context.entity_type].display_name_col, "contains", searchValue]
             ]
         })
     }, [searchValue])
 
 
     useEffect(() => {
-        attemptGridLayout(setContext)
+        attemptGridLayout((newcontext) => setContext(_setContext, newcontext))
     }, [])
 
-    return (STELLAR ?
+    return (context.page || context.STELLAR ?  // Valid contexts are all set at once. If we have STELLAR, we have a valid context.
         <div>
-            <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={context} setcontext={setContext} />
+            <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={context} setcontext={(newcontext) => setContext(_setContext, newcontext)} table={tableref}/>
             { context.entity_type ?
             <div>
-                <Gridtop style={{minHeight: "4.5vh", height: "4.5vh"}} context={context} fields={fields} setSearchValue={setSearchValue} showFieldCreationWindow={showFieldCreation} showRecordCreationWindow={showRecordCreation} />
-                <Grid style={{minHeight: "85vh", height: "85vh"}} context={context} data={data} setData={setData} headers={headers} showFieldEditWindow={showFieldEdit} setSelectedField={setSelectedField} tableref={tableref} updateData={() => {updateGridData(context, fields, filters, page, setData, setCount);tableref.current.resetRowSelection()}} />
-                <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={page} setPage={setPage} />
+                <Gridtop
+                    style={{minHeight: "4.5vh", height: "4.5vh"}}
+                    context={context}
+                    allFields={context.STELLAR.entities[context.entity_type].fields}
+                    toggleFieldDisplay={(field_to_toggle) => toggleFieldDisplay(field_to_toggle, fields, setFields)}
+                    setSearchValue={setSearchValue}
+                    showFieldCreationWindow={showFieldCreation}
+                    showRecordCreationWindow={showRecordCreation}
+                />
+                <Grid
+                    style={{minHeight: "85vh", height: "85vh"}}
+                    context={context}
+                    data={data}
+                    setData={setData}
+                    toggleFieldDisplay={() => toggleFieldDisplay(selectedFieldData, fields, setFields)}
+                    headers={headers}
+                    showFieldEditWindow={showFieldEdit}
+                    selectedField={selectedFieldData}
+                    setSelectedField={setSelectedField}
+                    tableref={tableref}
+                    updateData={() => {updateGridData(context, fields, filters, gridPage, setData, setCount);tableref.current.resetRowSelection()}}
+                />
+                <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={gridPage} setPage={setGridPage} />
             </div>
             :
-            <SchemaBase style={{minHeight: "92vh", height: "92vh"}} context={context} setcontext={setContext} />
+            context.STELLAR ?
+                <SchemaBase style={{minHeight: "92vh", height: "92vh"}} context={context} setcontext={(newcontext) => setContext(_setContext, newcontext)} />
+            :
+                <PageBase style={{minHeight: "92vh", height: "92vh"}} context={context} setcontext={(newcontext) => setContext(_setContext, newcontext)}/>
             }
-            {fieldCreateVisible ? <NewFieldWindow context={context} addDisplayField={(newfield)=> updateFieldsOnCreate(context, fields, setFields, newfield)} displaySelf={showFieldCreation} /> : null }
+            {fieldCreateVisible ? <NewFieldWindow context={context} addDisplayField={()=> setContext(_setContext, {schema:context.schema, entity_type:context.entity_type})} displaySelf={showFieldCreation} /> : null }
             {fieldEditVisible ? <EditFieldWindow context={context} displaySelf={showFieldEdit} field={selectedFieldData} /> : null }
-            {recordCreateVisible ? <NewRecordWindow context={context} updateData={() => {updateGridData(context, fields, filters, page, setData, setCount);tableref.current.resetRowSelection()}} displaySelf={showRecordCreation} /> : null }
+            {recordCreateVisible ? <NewRecordWindow context={context} updateData={() => {updateGridData(context, fields, filters, gridPage, setData, setCount);tableref.current.resetRowSelection()}} displaySelf={showRecordCreation} /> : null }
         </div>
-        : null
+        :
+        null
     )
 }
 

@@ -16,11 +16,11 @@ function SchemaCard(props) {
             onClick={(event) => {
                 if (props.setcontext) {
                     // Future-proofing, if we're in a Set Context environment
-                    history.pushState({}, "rAIlgun", `/${props.schemacode}`)
+                    history.pushState({}, "rAIlgun", encodeURI(`/${props.schemacode}`))
                     props.setcontext({schema: props.schemacode, entity_type: null})
                 } else {
                     // We're not in a Set Context environment
-                    location.href = `/${props.schemacode}`
+                    location.href = encodeURI(`/${props.schemacode}`)
                 }
             }}
         >
@@ -35,7 +35,7 @@ function RailgunRoot() {
 
     useEffect(() => {
         let bypass = async () => {
-            let schemas = await fetchRGData("Schema", ["name", "code"], null, 1, "railgun_internal", false)
+            let schemas = await fetchRGData("railgun_internal", "Schema", ["name", "code"], null, 1, false)
             setSchemas(schemas)
         }
         bypass()
@@ -43,7 +43,7 @@ function RailgunRoot() {
 
     return (
         <div style={{minHeight: "100vh", height: "100vh", overflow:"hidden",backgroundColor: "black"}}>
-            <RGHeader style={{minHeight: "8vh", height: "8vh"}}/>
+            <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={{}}/>
             {schemas ?
                 <div style={{minHeight: "96vh", height: "96vh", position: "relative", top: "-4vh"}} className="RG_SCHEMACARD_BG">
                     {schemas.map(schema => {

@@ -1,6 +1,6 @@
 import { useRef } from "react"
-import {STELLAR} from "../../STELLAR"
-import "../../styles/gridbottom.css"
+
+import "./styles/gridbottom.css"
 
 
 function PageSwitcher(props) {
@@ -62,7 +62,8 @@ function GridBottom(props){
     return (
         <div style={{...props.style}} className="RG_GRID_BOTTOM">
             <span />
-            <div name="count">{start}-{props.count > end ? end : props.count} of {props.count||0} {STELLAR.entities[props.context.entity_type]? STELLAR.entities[props.context.entity_type].multiname : ""} </div>
+            {/* <div name="count">{start}-{props.count > end ? end : props.count} of {props.count||0} {STELLAR.entities[props.context.entity_type]? STELLAR.entities[props.context.entity_type].multiname : ""} </div> */}
+            <div name="count">{start}-{props.count > end ? end : props.count} of {props.count||0} {props.context.STELLAR.entities[props.context.entity_type].multiname} </div>
             {props.count > 100 ? <PageSwitcher page={props.page} totalpage={Math.ceil(props.count / 100)} setPage={props.setPage} /> : <span />}
         </div>
     )

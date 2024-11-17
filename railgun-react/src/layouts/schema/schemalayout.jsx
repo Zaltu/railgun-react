@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { STELLAR, deleteRGEntity } from '/src/STELLAR'
+import { deleteRGEntity } from '/src/STELLAR'
 
 import {NewEntityWindow} from '/src/components/createEntityBox.jsx'
 import { Popup } from '/src/components/popup'
@@ -18,7 +18,7 @@ function EntityCard(props) {
             className='RG_ENTITY_CARD'
             onContextMenu={props.onContextMenu}
             onClick={(event) => {
-                history.pushState({}, "rAIlgun", `/${props.schema}/${props.entity_name}`)
+                history.pushState({}, "rAIlgun", encodeURI(`/${props.schema}/${props.entity_name}`))
                 props.setcontext({schema: props.schema, entity_type: props.entity_name})
             }}
         >
@@ -112,7 +112,7 @@ function setEntityCardContextMenuOpenPosition(event, setEntityCardContextMenu, s
 
 
 function SchemaBase(props) {
-    const [entities, setEntities] = useState(Object.values(STELLAR.entities).filter((entity) => {return !entity.archived}))
+    const [entities, setEntities] = useState(Object.values(props.context.STELLAR.entities).filter((entity) => {return !entity.archived}))
     const [entityCreateVisible, showEntityCreate] = useState(false)
 
     const [showPopup, setShowPopup] = useState(null)
@@ -129,7 +129,7 @@ function SchemaBase(props) {
                         schema={props.context.schema}
                         entity_name={entity.soloname}
                         setcontext={props.setcontext}
-                        onContextMenu={(event) => setEntityCardContextMenuOpenPosition(event, setCardContextMenu, schema, entity.soloname)}
+                        onContextMenu={(event) => setEntityCardContextMenuOpenPosition(event, setCardContextMenu, props.context.schema, entity.soloname)}
                     />
                 )})}
             </div>

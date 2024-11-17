@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
 import {RGDropDown} from '/src/components/dropdown.jsx'
-import { STELLAR } from '../../STELLAR'
 
-import '/src/styles/gridtop.css'
+import './styles/gridtop.css'
 
 function NewRecordButton(props) {
     return (
@@ -16,7 +14,7 @@ function NewRecordButton(props) {
 }
 
 
-function setupFieldMenuOptions(fields, showFieldCreationWindow) {
+function setupFieldMenuOptions(fields, showFieldCreationWindow, toggleFieldDisplay) {
     return [
         {
             label: "",
@@ -28,7 +26,7 @@ function setupFieldMenuOptions(fields, showFieldCreationWindow) {
                 ...Object.values(fields).map((field) => ({
                         value: field.code,
                         label: field.name,
-                        callback: () => console.log(field.code)
+                        callback: () => toggleFieldDisplay(field)
                 }))
             ]
         }
@@ -38,7 +36,7 @@ function setupFieldMenuOptions(fields, showFieldCreationWindow) {
 
 function SimpleSearchBox(props) {
     // Page can load before STELLAR is populated...
-    let placeholderText = STELLAR.entities[props.context.entity_type] ? STELLAR.entities[props.context.entity_type].multiname:""
+    let placeholderText = props.context.STELLAR.entities[props.context.entity_type].multiname//props.context.STELLAR.entities[props.context.entity_type] ? props.context.STELLAR.entities[props.context.entity_type].multiname:""
     return (
         <input
             type='text'
@@ -63,17 +61,19 @@ function SimpleSearchBox(props) {
 
 
 function Gridtop(props) {
-    const [field_menu_options, setFieldMenuOptions] = useState(setupFieldMenuOptions(props.fields, props.showFieldCreationWindow))
-
-    useEffect(()=>{
-        setFieldMenuOptions(setupFieldMenuOptions(props.fields, props.showFieldCreationWindow))
-    }, [props.fields])
-
     return (
         <div style={{...props.style}} className='RG_GRIDTOP_BG'>
             <div className='RG_GRIDTOP_CHUNK'>
                 <NewRecordButton context={props.context} display={props.context.entity_type} show={props.showRecordCreationWindow}/>
-                <RGDropDown context={props.context} button="Fields" options={field_menu_options}/>
+                <RGDropDown
+                    context={props.context}
+                    button="Fields"
+                    options={setupFieldMenuOptions(
+                        props.allFields,
+                        props.showFieldCreationWindow,
+                        props.toggleFieldDisplay
+                    )}
+                />
             </div>
             <div className='RG_GRIDTOP_CHUNK'>
                 <SimpleSearchBox context={props.context} setSearchValue={props.setSearchValue}/>
