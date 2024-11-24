@@ -1,41 +1,96 @@
 import AsyncSelect from 'react-select/async'
 import { fetchRGData, updateRGData } from '/src/STELLAR.jsx';
 import './rgheader.css'
+import { useRef } from 'react';
 
 
 
 function RGAsyncDropDown(props) {
+    const dropref = useRef()
+
+    // Anatomy of a HACK
+    // Display is duplicated to bypass react-select shenanigans (can't only loadOptions when you click the button).
+    // The overlap is set to absolute positioning, so it needs an absolute width to survive
+    // This formula is equivalent to the number of characters * 10.15px, plus 20px to represent the width of the selector (arrow)
+    // props.defaultDisplay.length*10.15+20
     return (
-        <AsyncSelect
-            unstyled
-            isSearchable={false}
-            defaultValue={{label: props.defaultDisplay, value: "base"}}
-            value={{label: props.defaultDisplay, value: "base"}}
-            defaultOptions
-            loadOptions={() => {
-                return getSchemaOptions(props.setcontext)
-            }}
-            noOptionsMessage={() => `Loading...`}
-            className='RG_LIST_BUTTON'
-            classNames={{
-                menuList: () => "RG_DROPDOWN_LIST",
-                option: () => "RG_DROPDOWN_LIST_ITEM",
-                group: () => "RG_DROPDOWN_GROUP",
-                noOptionsMessage: () => "RG_MULTIENTITY_LIST_ITEM",
-            }}
-            styles={{
-                control: (base) => ({
-                    ...base,
-                    minHeight: "fit-content",
-                    padding: "0.3rem 0.2rem"
-                }),
-                option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isFocused ? "var(--RG_HIGHLIGHT_GREY)": ""  // Needs to be here to enable keyboard navigation
-                })
-            }}
-            onChange={(option) => option.callback()}
-        />
+        <div style={{position: "relative"}} >
+            <AsyncSelect
+                unstyled
+                isDisabled={true}
+                isSearchable={false}
+                defaultValue={{label: props.defaultDisplay, value: "base"}}
+                value={{label: props.defaultDisplay, value: "base"}}
+                placeholder={props.defaultDisplay}
+                className='RG_LIST_BUTTON'
+                styles={{
+                    container: (base) => ({
+                        ...base,
+                        position: "absolute",
+                        minWidth: String(props.defaultDisplay.length*10.15+20)+"px",  // HACK
+                        top: 0,
+                        left: 0,
+                    }),
+                    control: (base) => ({
+                        ...base,
+                        minHeight: "fit-content",
+                        padding: "0.3rem 0.2rem"
+                    })
+                }}
+            />
+            <AsyncSelect
+                unstyled
+                ref={dropref}
+                isSearchable={false}
+                onFocus={()=>{
+                    // No idea what this does, but it works
+                    // Trial and error ftw
+                    dropref.current.onInputChange("hack")  // HACK
+                }}
+                defaultValue={{label: props.defaultDisplay, value: "base"}}
+                value={{label: props.defaultDisplay, value: "base"}}
+                cacheOptions
+                loadOptions={() => {
+                    return props.populateWith()
+                }}
+                noOptionsMessage={() => `Loading...`}
+                placeholder={props.defaultDisplay}
+                className='RG_LIST_BUTTON'
+                classNames={{
+                    menuList: () => "RG_DROPDOWN_LIST",
+                    option: () => "RG_DROPDOWN_LIST_ITEM",
+                    group: () => "RG_DROPDOWN_GROUP",
+                    noOptionsMessage: () => "RG_MULTIENTITY_LIST_ITEM",
+                }}
+                styles={{
+                    container: (base) => ({
+                        ...base,
+                        minWidth: String(props.defaultDisplay.length*10.15+20)+"px",  // HACK
+                    }),
+                    singleValue: (base) => ({
+                        ...base,
+                        color: "transparent"
+                    }),
+                    indicatorsContainer: (base) => ({
+                        ...base,
+                        color: "transparent"
+                    }),
+                    control: (base) => ({
+                        ...base,
+                        minHeight: "fit-content",
+                        padding: "0.3rem 0.2rem",
+                    }),
+                    option: (base, state) => ({
+                        ...base,
+                        backgroundColor: state.isFocused ? "var(--RG_HIGHLIGHT_GREY)": ""  // Needs to be here to enable keyboard navigation
+                    })
+                }}
+                onInputChange={()=>{}}
+                onChange={(option) => {
+                    option ? option.callback():null
+                }}
+            />
+        </div>
     )
 }
 
@@ -52,6 +107,20 @@ async function getSchemaOptions(setcontext){
                     schema:schema.code,
                     entity_type:schema.entities ? schema.entities[0].soloname : null
                 })
+            }
+        }
+    })
+}
+
+async function getPageOptions(setcontext, pageLayoutLoad){
+    let pages = await fetchRGData("railgun_internal", "Page", ["name", "uid"], null, 1, false)
+    return pages.map(page => {
+        return {
+            value: page.name,
+            label: page.name,
+            callback: () => {
+                history.pushState({}, "rAIlgun", encodeURI(`/pages/${page.uid}`))
+                pageLayoutLoad(setcontext, page.uid)
             }
         }
     })
@@ -95,7 +164,7 @@ function SavePageButton(props){
                     entity: "Page Setting",
                     entity_id: props.activePage.uid,
                     data: {
-                        "fields": updatedFields
+                        "fields": JSON.stringify(updatedFields)
                     }
                 }
                 updateRGData(UPDATE_REQUEST).then((res)=>{
@@ -146,7 +215,7 @@ function getPageTabs(context, setcontext){
                 style={{color: tab.uid==activepageuid && "orange"}}
                 onClick={tab.uid==activepageuid ? () => void(0) : (() => {
                     setcontext({
-                        schema:tab.entity.schema.code,  // TODO...
+                        schema:tab.entity.schema.code,
                         entity_type:tab.entity.soloname,
                         page: {
                             base: context.page.base,
@@ -169,7 +238,8 @@ function RGHeader(props) {
             <div className="RG_HEADER_TOP">
                 <div className='RG_HEADER_TOPLEFT'>
                     <img style={{maxHeight: '20px', cursor: "pointer"}} src='/logo/railguntemplogo.png' onClick={()=>location.href="/"} />
-                    <RGAsyncDropDown defaultDisplay='Schema' setcontext={props.setcontext} />
+                    <RGAsyncDropDown defaultDisplay='Schema' populateWith={()=>getSchemaOptions(props.setcontext)}/>
+                    <RGAsyncDropDown defaultDisplay='Pages' populateWith={()=>getPageOptions(props.setcontext, props.pageLayoutLoad)}/>
                 </div>
                 <div>
                     {/* TODO INSERT USER ICON HERE */}

@@ -1,8 +1,10 @@
 .RG_ENTITYCARD_BG {
     background-color: black;
-    display: flex;
-    flex-wrap: wrap;
-    padding: 0 25px 0 25px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 250px);
+    grid-template-rows: repeat(auto-fit, 250px);
+    gap: 50px;
+    padding: 50px 50px 50px 50px;
 }
 
 
@@ -17,8 +19,6 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin: 25px;
-    margin-top: 50px;
     border-radius: 15px;
     border: 3px solid var(--RG_HIGHLIGHT_GREY);
     cursor: pointer;

@@ -29,7 +29,9 @@
     cursor: pointer;
     position: sticky;
     top: 0;
-
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 18px;
     font-size: 0.75rem;
     margin:0;

@@ -6,9 +6,15 @@ function TabCard(props) {
         <button
             className='RG_ENTITY_CARD'
             onClick={(event) => {
-                console.log("PAGE:")
-                console.log(props.tab)
-                // TODO change context
+                props.setcontext({
+                    schema:props.tab.entity.schema.code,
+                    entity_type:props.tab.entity.soloname,
+                    page: {
+                        base: props.context.page.base,
+                        page_settings: props.context.page.page_settings,
+                        active: props.tab
+                    }
+                })
             }}
         >
             {props.tab.name}
@@ -28,6 +34,7 @@ function PageBase(props) {
                         key={tab.uid}
                         tab={tab}
                         schema={"pages"}
+                        context={props.context}
                         setcontext={props.setcontext}
                     />
                 )})}

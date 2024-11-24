@@ -537,7 +537,7 @@ function toggleFieldDisplay(field_to_toggle, fields, setFields){
 
 
 async function updateGridData(context, fields, filters, page, setData, setCount) {
-    let rg_data = await fetchRGData(context.schema, context.entity_type, Object.keys(fields), filters, page)
+    let rg_data = await fetchRGData(context.schema, context.entity_type, Object.keys(fields), filters, page.page)
     if (!rg_data){
         // STELLAR is probably not set up...
         return
@@ -625,7 +625,8 @@ function GridLayout(props) {
     const [headers, setHeaders] = useState(formatHeaders(fields, context))  // TODO Show/Hide
     const [searchValue, setSearchValue] = useState(null)
     const [count, setCount] = useState(71) // 71 ???
-    const [gridPage, setGridPage] = useState(1)
+    // HACK to get the state to be updated even if the values don't change
+    const [gridPage, setGridPage] = useState({"page": 1, "trigger":false})
 
     const tableref = useRef()
 
@@ -634,6 +635,8 @@ function GridLayout(props) {
         // TODO this entire effect can be trashed since we have a higher-level setcontext wrapper poggers
         if (context.entity_type){
             // We're going to another grid view
+            // Start by resetting the page so we don't end up showing something weird
+            setGridPage({"page": 1, "trigger": false})
             // If we have an active page, that has actual fields defined, display those fields.
             // If we have an active page defined with no fields, display all fields like on a default page.
             if (context.page && context.page.active && context.page.active.fields) {
@@ -671,7 +674,7 @@ function GridLayout(props) {
 
     // When page changes, update data
     useEffect(() => {
-        if (!context.STELLAR){return}
+        if (!context.STELLAR||!gridPage.trigger){return}
         // HACK doing like this means that the count gets updated even if all that changes is the page
         // ...but it's convenient
         updateGridData(context, fields, filters, gridPage, setData, setCount)
@@ -699,7 +702,13 @@ function GridLayout(props) {
 
     return (context.page || context.STELLAR ?  // Valid contexts are all set at once. If we have STELLAR, we have a valid context.
         <div>
-            <RGHeader style={{minHeight: "8vh", height: "8vh"}} context={context} setcontext={(newcontext) => setContext(_setContext, newcontext)} table={tableref}/>
+            <RGHeader
+                style={{minHeight: "8vh", height: "8vh"}}
+                context={context}
+                setcontext={(newcontext) => setContext(_setContext, newcontext)}
+                table={tableref}
+                pageLayoutLoad={attemptPageLayout}
+            />
             { context.entity_type ?
             <div>
                 <Gridtop
@@ -724,7 +733,7 @@ function GridLayout(props) {
                     tableref={tableref}
                     updateData={() => {updateGridData(context, fields, filters, gridPage, setData, setCount);tableref.current.resetRowSelection()}}
                 />
-                <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={gridPage} setPage={setGridPage} />
+                <GridBottom style={{minHeight: "2.5vh", height: "2.5vh"}} context={context} count={count} page={gridPage.page} setPage={(newpage)=>setGridPage({"page": newpage, "trigger": true})} />
             </div>
             :
             context.STELLAR ?

@@ -28,7 +28,7 @@ function TableHeaderCell(props) {
                 className: "RG_GRID_HEADER",
                 style: {
                     width: props.header.column.columnDef.enableResizing ? props.header.getSize() : 'fit-content',
-                    minWidth: props.header.column.columnDef.enableResizing ? props.header.getSize() : 'fit-content',//header.getSize(),
+                    minWidth: props.header.column.columnDef.enableResizing ? props.header.getSize() : 'fit-content',
                     maxWidth: props.header.column.columnDef.enableResizing ? props.header.getSize() : 100000
                 },
             }}

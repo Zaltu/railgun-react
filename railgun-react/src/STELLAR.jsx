@@ -25,7 +25,7 @@ async function login(creds) {
         mode:"cors",
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         method: "POST",
-        body: `grant_type=password&username=${creds.get("username")}&password=${creds.get("password")}`,
+        body: `grant_type=password&username=${encodeURIComponent(creds.get("username"))}&password=${encodeURIComponent(creds.get("password"))}`,
         credentials: "include"
     })
     if (!login_response.ok){
