@@ -551,29 +551,23 @@ async function attemptPageLayout(setcontext, pageid) {
     let page = (await fetchRGData(
         "railgun_internal",
         "Page",
-        ["name", "page_settings"],
+        [
+            "name",
+            "page_settings.Page Setting.name",
+            "page_settings.Page Setting.entity",
+            "page_settings.Page Setting.sort",
+            "page_settings.Page Setting.filters",
+            "page_settings.Page Setting.fields",
+            "page_settings.Page Setting.entity.Entity.schema.Schema.code"],
         {
             "filter_operator": "AND",
             "filters": [["uid", "is", pageid]]
         },
         1, false))[0]
-    let pagesettings = []
-    await Promise.all(page.page_settings.map(async (pagesetting) => {
-        let fetchData = await fetchRGData(
-            "railgun_internal",
-            "Page Setting",
-            ["name", "entity", "sort", "filters", "fields", "entity.Entity.schema.Schema.code"],
-            {
-                "filter_operator": "AND",
-                "filters": [["uid", "is", pagesetting.uid]]
-            },
-            1, false)
-        pagesettings = pagesettings.concat(fetchData)
-    }))
     setcontext({
         page: {
             base: page,
-            page_settings: pagesettings,
+            page_settings: page.page_settings,
             active: null
         }
     })

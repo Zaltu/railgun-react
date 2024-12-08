@@ -102,11 +102,16 @@ async function getSchemaOptions(setcontext){
             value: schema.code,
             label: schema.name,
             callback: () => {
-                history.pushState({}, "rAIlgun", encodeURI(`/${schema.code}/${schema.entities ? schema.entities[0].soloname: ""}`))
-                setcontext({
-                    schema:schema.code,
-                    entity_type:schema.entities ? schema.entities[0].soloname : null
-                })
+                // If we're on the overall RG landing page, there is no context
+                if (setcontext){
+                    history.pushState({}, "rAIlgun", encodeURI(`/${schema.code}/${schema.entities ? schema.entities[0].soloname: ""}`))
+                    setcontext({
+                        schema:schema.code,
+                        entity_type:schema.entities ? schema.entities[0].soloname : null
+                    })
+                } else {
+                    location.href = encodeURI(`/${schema.code}/${schema.entities ? schema.entities[0].soloname: ""}`)
+                }
             }
         }
     })
@@ -119,8 +124,13 @@ async function getPageOptions(setcontext, pageLayoutLoad){
             value: page.name,
             label: page.name,
             callback: () => {
-                history.pushState({}, "rAIlgun", encodeURI(`/pages/${page.uid}`))
-                pageLayoutLoad(setcontext, page.uid)
+                // If we're on the overall RG landing page, there is no context (and no pageLayoutLoad function)
+                if (setcontext){
+                    history.pushState({}, "rAIlgun", encodeURI(`/pages/${page.uid}`))
+                    pageLayoutLoad(setcontext, page.uid)
+                } else {
+                    location.href = encodeURI(`/pages/${page.uid}`)
+                }
             }
         }
     })
